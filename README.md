@@ -23,7 +23,35 @@ Many thanks to all the authors of [HaMeR](https://github.com/geopavlakos/hamer) 
 
 ## Installation
 
-Requires Python 3.10. Install with [uv](https://docs.astral.sh/uv/) (PyTorch is resolved from the CUDA 11.8 index configured in `pyproject.toml`):
+**Requires Python 3.10** (`requires-python = ">=3.10,<3.11"`). pip and uv enforce this: installation on any other Python version fails. When adding hamer-mini with uv, your project's `requires-python` must also fit inside `>=3.10,<3.11`.
+
+### uv
+
+```bash
+uv add "hamer-mini @ git+https://github.com/ryhara/hamer-mini.git"
+```
+
+With the optional pyrender-based mesh visualization for demo
+
+```bash
+uv add "hamer-mini[render] @ git+https://github.com/ryhara/hamer-mini.git"
+```
+
+### pip
+
+```bash
+pip install "git+https://github.com/ryhara/hamer-mini.git"
+```
+
+with the optional pyrender-based mesh visualization for demo
+
+```bash
+pip install "hamer-mini[render] @ git+https://github.com/ryhara/hamer-mini.git"
+```
+
+### Development (from source)
+
+Install with [uv](https://docs.astral.sh/uv/) (PyTorch is resolved from the CUDA 11.8 index configured in `pyproject.toml`):
 
 ```bash
 git clone https://github.com/ryhara/hamer-mini
@@ -31,20 +59,6 @@ cd hamer-mini
 uv sync
 # Optional: pyrender-based mesh visualization (falls back to OpenCV without it)
 uv sync --extra render
-```
-
-### As a dependency (`uv add` / `pip install`)
-
-#### uv
-
-```bash
-uv add "hamer-mini @ git+https://github.com/ryhara/hamer-mini.git"
-```
-
-#### pip
-
-```bash
-pip install "git+https://github.com/ryhara/hamer-mini.git"
 ```
 
 ## Demo
@@ -141,4 +155,3 @@ outputs = pipe.predict_with_bboxes(image, bboxes, is_rights)  # bboxes: (N, 4), 
 ## License
 
 - Code: same license as [HaMeR](https://github.com/geopavlakos/hamer/blob/main/LICENSE.md). See [LICENSE](LICENSE).
-- MANO: [MANO license](https://mano.is.tue.mpg.de/license.html)
