@@ -2,6 +2,8 @@
 
 A minimal, pip-installable inference library for [HaMeR](https://github.com/geopavlakos/hamer) (Reconstructing Hands in 3D with Transformers, CVPR 2024).
 
+Many thanks to all the authors of [HaMeR](https://github.com/geopavlakos/hamer) for their great work.
+
 <table>
   <tr>
     <td><img src="example_data/test1.jpg" width="220"/></td>
@@ -45,6 +47,25 @@ cp mano_v1_2/models/MANO_RIGHT.pkl ~/.cache/hamer_mini/mano/
 
 Alternatively, pass its location directly: `HaMeRHandPose3dEstimationPipeline(mano_model_path="/path/to/MANO_RIGHT.pkl")`.
 
+## Demo
+
+```bash
+python demo.py --image example_data/test1.jpg --mesh --hand-conf 0.3
+```
+
+The demo draws the detection bbox, the 2D hand skeleton and (with `--mesh`) the MANO mesh, all in the same per-hand color (green = right, blue = left). With the `render` extra installed the mesh is rendered with pyrender (lighting and correct occlusion, headless via EGL); otherwise a built-in OpenCV rasterizer is used, so `--mesh` works without any OpenGL setup.
+
+## Weights
+
+Downloaded automatically on first use:
+
+- HaMeR checkpoint (`hamer.ckpt`), ViTPose wholebody checkpoint (`wholebody.pth`) and MANO mean parameters (`mano_mean_params.npz`) from the official [HaMeR Hugging Face Space](https://huggingface.co/spaces/geopavlakos/HaMeR)
+- ViTDet person detector checkpoint from the [detectron2 model zoo](https://github.com/facebookresearch/detectron2/tree/main/projects/ViTDet)
+
+Manual download required:
+
+- `MANO_RIGHT.pkl` from [mano.is.tue.mpg.de](https://mano.is.tue.mpg.de) (see Installation)
+
 ## Usage
 
 ```python
@@ -71,6 +92,9 @@ outputs = pipe.predict(
 
 `predict()` returns one dict per detected hand:
 
+<details>
+<summary>Output keys</summary>
+
 | Key | Shape / type | Description |
 | --- | --- | --- |
 | `hand_bbox` | `list[4]` | Detection bounding box `[x1, y1, x2, y2]` in pixels |
@@ -87,23 +111,14 @@ outputs = pipe.predict(
 | `hamer_preds.pred_keypoints_2d` | `(1, 21, 2)` | 2D joints in full-image pixels |
 | `hamer_preds.pred_vertices_2d` | `(1, 778, 2)` | 2D mesh vertices in full-image pixels (only with `return_vertices_2d=True`) |
 
-To render or export the mesh, the MANO triangle faces are available as `pipe.mano_faces` (use `faces[:, [0, 2, 1]]` for left hands to fix the winding order).
+</details>
 
-If you already have hand bounding boxes, skip the detector:
 
-```python
-outputs = pipe.predict_with_bboxes(image, bboxes, is_rights)  # bboxes: (N, 4), is_rights: (N,)
-```
-
-### Demo
-
-```bash
-python demo.py --image example_data/test1.jpg --mesh --hand-conf 0.3
-```
-
-The demo draws the detection bbox, the 2D hand skeleton and (with `--mesh`) the MANO mesh, all in the same per-hand color (green = right, blue = left). With the `render` extra installed the mesh is rendered with pyrender (lighting and correct occlusion, headless via EGL); otherwise a built-in OpenCV rasterizer is used, so `--mesh` works without any OpenGL setup.
 
 ### Pipeline options
+
+<details>
+<summary>Constructor kwargs</summary>
 
 | Constructor kwarg | Default | Description |
 | --- | --- | --- |
@@ -117,16 +132,15 @@ The demo draws the detection bbox, the 2D hand skeleton and (with `--mesh`) the 
 | `pretrained_dir` | `~/.cache/hamer_mini` | Weight cache directory (or `HAMER_MINI_PRETRAINED_DIR` env var) |
 | `mano_model_path` | `<pretrained_dir>/mano/MANO_RIGHT.pkl` | Path to the manually downloaded MANO model |
 
-## Weights
+To render or export the mesh, the MANO triangle faces are available as `pipe.mano_faces` (use `faces[:, [0, 2, 1]]` for left hands to fix the winding order).
 
-Downloaded automatically on first use:
+If you already have hand bounding boxes, skip the detector:
 
-- HaMeR checkpoint (`hamer.ckpt`), ViTPose wholebody checkpoint (`wholebody.pth`) and MANO mean parameters (`mano_mean_params.npz`) from the official [HaMeR Hugging Face Space](https://huggingface.co/spaces/geopavlakos/HaMeR)
-- ViTDet person detector checkpoint from the [detectron2 model zoo](https://github.com/facebookresearch/detectron2/tree/main/projects/ViTDet)
+```python
+outputs = pipe.predict_with_bboxes(image, bboxes, is_rights)  # bboxes: (N, 4), is_rights: (N,)
+```
 
-Manual download required:
-
-- `MANO_RIGHT.pkl` from [mano.is.tue.mpg.de](https://mano.is.tue.mpg.de) (see Installation)
+</details>
 
 ## License
 
