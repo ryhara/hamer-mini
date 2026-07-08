@@ -155,3 +155,28 @@ outputs = pipe.predict_with_bboxes(image, bboxes, is_rights)  # bboxes: (N, 4), 
 ## License
 
 - Code: same license as [HaMeR](https://github.com/geopavlakos/hamer/blob/main/LICENSE.md). See [LICENSE](LICENSE).
+
+## Citation
+
+original HaMeR paper:
+
+```
+@inproceedings{pavlakos2024reconstructing,
+    title={{Reconstructing Hands in 3D with Transformers}},
+    author={Pavlakos, Georgios and Shan, Dandan and Radosavovic, Ilija and Kanazawa, Angjoo and Fouhey, David and Malik, Jitendra},
+    booktitle={IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+    year={2024}
+}
+```
+
+this library:
+
+```
+@software{hara2026hamer_mini,
+  author  = {Hara, Ryosei},
+  title   = {hamer-mini},
+  year    = {2026},
+  url     = {https://github.com/ryhara/hamer-mini},
+  version = {0.1.0}
+}
+```
