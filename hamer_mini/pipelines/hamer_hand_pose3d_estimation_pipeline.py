@@ -19,8 +19,8 @@ from ..models.hamer import HAMER
 from ..utils import utils
 from ..utils.logger import get_logger
 
-# Repository hosting the official HaMeR demo data (checkpoint, MANO mean parameters,
-# ViTPose wholebody checkpoint)
+# Repository hosting the official HaMeR demo data (checkpoint, MANO model and mean
+# parameters, ViTPose wholebody checkpoint)
 HAMER_REPO_ID = "geopavlakos/HaMeR"
 
 # Aspect ratio (width, height) of the bounding box expected by the ViT backbone
@@ -54,9 +54,8 @@ class HaMeRHandPose3dEstimationPipeline:
             pretrained_dir (str): Directory to store the downloaded weights. Defaults to
                 the HAMER_MINI_PRETRAINED_DIR environment variable or ~/.cache/hamer_mini.
             mano_model_path (str): Path to the MANO right hand model file (MANO_RIGHT.pkl).
-                Defaults to <pretrained_dir>/mano/MANO_RIGHT.pkl. This file is NOT
-                downloaded automatically; obtain it from https://mano.is.tue.mpg.de after
-                accepting the MANO license and place it there yourself.
+                Defaults to <pretrained_dir>/_DATA/data/mano/MANO_RIGHT.pkl, downloaded
+                automatically from the HaMeR Hugging Face Space.
             hamer_repo_id (str): Hugging Face Space hosting the HaMeR demo data.
         """
         self.verbose = kwargs.get("verbose", False)
@@ -78,27 +77,22 @@ class HaMeRHandPose3dEstimationPipeline:
                            os.path.join(os.path.expanduser("~"), ".cache", "hamer_mini")))
         os.makedirs(pretrained_dir, exist_ok=True)
 
-        # The MANO hand model is licensed separately (https://mano.is.tue.mpg.de) and is
-        # therefore not downloaded automatically; the user must place it manually.
-        mano_model_path = kwargs.get("mano_model_path",
-                                     os.path.join(pretrained_dir, "mano", "MANO_RIGHT.pkl"))
-        if not os.path.exists(mano_model_path):
-            raise FileNotFoundError(
-                f"MANO model not found: {mano_model_path}\n"
-                "The MANO hand model cannot be redistributed with hamer-mini. Please:\n"
-                "  1. Register at https://mano.is.tue.mpg.de and accept the MANO license\n"
-                "  2. Download 'Models & Code' (mano_v1_2.zip)\n"
-                f"  3. Copy mano_v1_2/models/MANO_RIGHT.pkl to {mano_model_path}\n"
-                "or pass its location with the 'mano_model_path' keyword argument.")
-
         # File layout of the official HaMeR demo data inside the Hugging Face Space
+        mano_model_path = kwargs.get("mano_model_path",
+                                     os.path.join(pretrained_dir, "_DATA", "data", "mano",
+                                                  "MANO_RIGHT.pkl"))
         mano_mean_params_path = os.path.join(pretrained_dir, "_DATA", "data", "mano_mean_params.npz")
         hamer_ckpt_path = os.path.join(pretrained_dir, "_DATA", "hamer_ckpts", "checkpoints", "hamer.ckpt")
         vitpose_ckpt_path = os.path.join(pretrained_dir, "_DATA", "vitpose_ckpts",
                                          "vitpose+_huge", "wholebody.pth")
-        for filename, path in [("_DATA/data/mano_mean_params.npz", mano_mean_params_path),
-                               ("_DATA/hamer_ckpts/checkpoints/hamer.ckpt", hamer_ckpt_path),
-                               ("_DATA/vitpose_ckpts/vitpose+_huge/wholebody.pth", vitpose_ckpt_path)]:
+        download_files = [("_DATA/data/mano_mean_params.npz", mano_mean_params_path),
+                          ("_DATA/hamer_ckpts/checkpoints/hamer.ckpt", hamer_ckpt_path),
+                          ("_DATA/vitpose_ckpts/vitpose+_huge/wholebody.pth", vitpose_ckpt_path)]
+        # A user-supplied mano_model_path points at an existing local file; only the
+        # default location is downloaded from the Space.
+        if "mano_model_path" not in kwargs:
+            download_files.insert(0, ("_DATA/data/mano/MANO_RIGHT.pkl", mano_model_path))
+        for filename, path in download_files:
             if not os.path.exists(path):
                 self.logger.info(f"downloading {filename} from Hugging Face Space {hamer_repo_id}")
                 hf_hub_download(repo_id=hamer_repo_id, repo_type="space", filename=filename,

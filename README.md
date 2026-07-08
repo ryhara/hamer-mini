@@ -47,21 +47,6 @@ uv add "hamer-mini @ git+https://github.com/ryhara/hamer-mini.git"
 pip install "git+https://github.com/ryhara/hamer-mini.git"
 ```
 
-### MANO hand model (required, manual download)
-
-hamer-mini does not redistribute the MANO hand model. Before first use:
-
-1. Register at [mano.is.tue.mpg.de](https://mano.is.tue.mpg.de) and accept the [MANO license](https://mano.is.tue.mpg.de/license.html)
-2. Download **Models & Code** (`mano_v1_2.zip`)
-3. Copy `mano_v1_2/models/MANO_RIGHT.pkl` to `~/.cache/hamer_mini/mano/MANO_RIGHT.pkl`
-
-```bash
-mkdir -p ~/.cache/hamer_mini/mano
-cp mano_v1_2/models/MANO_RIGHT.pkl ~/.cache/hamer_mini/mano/
-```
-
-Alternatively, pass its location directly: `HaMeRHandPose3dEstimationPipeline(mano_model_path="/path/to/MANO_RIGHT.pkl")`.
-
 ## Demo
 
 ```bash
@@ -74,12 +59,8 @@ The demo draws the detection bbox, the 2D hand skeleton and (with `--mesh`) the 
 
 Downloaded automatically on first use:
 
-- HaMeR checkpoint (`hamer.ckpt`), ViTPose wholebody checkpoint (`wholebody.pth`) and MANO mean parameters (`mano_mean_params.npz`) from the official [HaMeR Hugging Face Space](https://huggingface.co/spaces/geopavlakos/HaMeR)
+- HaMeR checkpoint (`hamer.ckpt`), ViTPose wholebody checkpoint (`wholebody.pth`), MANO hand model (`MANO_RIGHT.pkl`) and MANO mean parameters (`mano_mean_params.npz`) from the official [HaMeR Hugging Face Space](https://huggingface.co/spaces/geopavlakos/HaMeR)
 - ViTDet person detector checkpoint from the [detectron2 model zoo](https://github.com/facebookresearch/detectron2/tree/main/projects/ViTDet)
-
-Manual download required:
-
-- `MANO_RIGHT.pkl` from [mano.is.tue.mpg.de](https://mano.is.tue.mpg.de) (see Installation)
 
 ## Usage
 
@@ -145,7 +126,7 @@ outputs = pipe.predict(
 | `hand_conf` | `0.5` | Default hand keypoint confidence threshold |
 | `focal_length` | `5000` | HaMeR training focal length (crop pixels) |
 | `pretrained_dir` | `~/.cache/hamer_mini` | Weight cache directory (or `HAMER_MINI_PRETRAINED_DIR` env var) |
-| `mano_model_path` | `<pretrained_dir>/mano/MANO_RIGHT.pkl` | Path to the manually downloaded MANO model |
+| `mano_model_path` | `<pretrained_dir>/_DATA/data/mano/MANO_RIGHT.pkl` | Path to the MANO model (downloaded automatically) |
 
 To render or export the mesh, the MANO triangle faces are available as `pipe.mano_faces` (use `faces[:, [0, 2, 1]]` for left hands to fix the winding order).
 
