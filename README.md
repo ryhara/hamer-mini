@@ -4,6 +4,8 @@ A minimal, pip-installable inference library for [HaMeR](https://github.com/geop
 
 Many thanks to all the authors of [HaMeR](https://github.com/geopavlakos/hamer) for their great work.
 
+[![Demo](https://img.shields.io/badge/🤗%20Demo-hamer--mini-blue)](https://huggingface.co/spaces/ryhara/hamer-mini)
+
 <table>
   <tr>
     <td><img src="example_data/test1.jpg" width="220"/></td>
