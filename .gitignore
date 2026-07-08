@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# uv
+uv.lock
+
+# Downloaded weights
+pretrained_models/
+_DATA/
+
+# Demo outputs
+output/
