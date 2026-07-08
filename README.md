@@ -34,6 +34,20 @@ uv sync
 uv sync --extra render
 ```
 
+### As a dependency (`uv add` / `pip install`)
+
+#### uv
+
+```bash
+uv add "hamer-mini @ git+https://github.com/ryhara/hamer-mini.git"
+```
+
+#### pip
+
+```bash
+pip install "git+https://github.com/ryhara/hamer-mini.git"
+```
+
 ### MANO hand model (required, manual download)
 
 hamer-mini does not redistribute the MANO hand model. Before first use:
