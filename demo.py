@@ -11,7 +11,17 @@ import cv2
 import numpy as np
 import torch
 
-from hamer_mini import HaMeRHandPose3dEstimationPipeline
+from hamer_mini import (
+    FINGER_NAMES,
+    FINGERTIP_KEYPOINTS,
+    FINGERTIP_PARENT_JOINTS,
+    MANO_TO_KEYPOINT,
+    HaMeRHandPose3dEstimationPipeline,
+    axis_angle_to_euler,
+    axis_angle_to_matrix,
+    cumulative_joint_rotations,
+    matrix_to_euler,
+)
 
 # 21 hand joints in OpenPose ordering: 0 = wrist, then 4 joints per finger
 # (thumb, index, middle, ring, pinky) from base to tip.
@@ -20,6 +30,9 @@ HAND_SKELETON = [(0, 1), (1, 2), (2, 3), (3, 4),
                  (0, 9), (9, 10), (10, 11), (11, 12),
                  (0, 13), (13, 14), (14, 15), (15, 16),
                  (0, 17), (17, 18), (18, 19), (19, 20)]
+
+# Axis colors (BGR): x=red, y=green, z=blue.
+AXIS_COLORS = [(60, 60, 255), (60, 220, 60), (255, 120, 80)]
 
 
 def hand_color(is_right) -> tuple:
@@ -110,6 +123,62 @@ def draw_joints(image_bgr: np.ndarray, keypoints_2d: np.ndarray, color: tuple) -
         cv2.circle(image_bgr, (x, y), 3, color, -1, cv2.LINE_AA)
 
 
+def draw_rotation_axes(image_bgr: np.ndarray, origin: tuple, rotmat: np.ndarray,
+                       length: float, thickness: int = 2) -> None:
+    """Draw a rotated coordinate frame at ``origin`` (orthographic projection).
+
+    The columns of ``rotmat`` are the frame's x/y/z axes in camera space;
+    their (x, y) components are drawn directly in image space.
+    """
+    ox, oy = int(origin[0]), int(origin[1])
+    for j in range(3):
+        dx = int(rotmat[0, j] * length)
+        dy = int(rotmat[1, j] * length)
+        cv2.line(image_bgr, (ox, oy), (ox + dx, oy + dy),
+                 AXIS_COLORS[j], thickness, cv2.LINE_AA)
+
+
+def draw_hand_rotations(image_bgr: np.ndarray, ret: dict) -> None:
+    """Draw the MANO rotations of one hand: the wrist (global_orient) frame at
+    the wrist keypoint plus a small camera-space frame at every finger joint
+    and fingertip (hand_pose composed along the kinematic chain)."""
+    preds = ret["hamer_preds"]
+    kpts = preds["pred_keypoints_2d"][0]
+    global_orient = preds["global_orient"].reshape(3)
+    hand_pose = preds["hand_pose"].reshape(15, 3)
+    x1, y1, x2, y2 = ret["crop_bbox"]
+    bbox_size = max(x2 - x1, y2 - y1)
+
+    joint_rots = cumulative_joint_rotations(global_orient, hand_pose)
+    axis_len = max(6.0, bbox_size * 0.06)
+    for j, k in enumerate(MANO_TO_KEYPOINT):
+        draw_rotation_axes(image_bgr, (kpts[k, 0], kpts[k, 1]), joint_rots[j],
+                           axis_len, thickness=1)
+    # Fingertips inherit the distal phalanx orientation.
+    for j, k in zip(FINGERTIP_PARENT_JOINTS, FINGERTIP_KEYPOINTS):
+        draw_rotation_axes(image_bgr, (kpts[k, 0], kpts[k, 1]), joint_rots[j],
+                           axis_len, thickness=1)
+
+    wrist_rot = axis_angle_to_matrix(global_orient)
+    draw_rotation_axes(image_bgr, (kpts[0, 0], kpts[0, 1]), wrist_rot,
+                       max(12.0, bbox_size * 0.2))
+
+
+def print_mano_rotations(preds: dict) -> None:
+    """Print the MANO parameters of one hand as axis-angle Euler angles."""
+    global_orient = preds["global_orient"].reshape(3)
+    hand_pose = preds["hand_pose"].reshape(15, 3)
+    roll, pitch, yaw = axis_angle_to_euler(global_orient)
+    print(f"  global_orient (deg): roll={roll:+.1f} pitch={pitch:+.1f} yaw={yaw:+.1f}")
+    for j, (jr, jp, jy) in enumerate(axis_angle_to_euler(hand_pose)):
+        print(f"  hand_pose[{j:2d}] (deg): roll={jr:+.1f} pitch={jp:+.1f} yaw={jy:+.1f}")
+    tip_euler = matrix_to_euler(
+        cumulative_joint_rotations(global_orient, hand_pose)[FINGERTIP_PARENT_JOINTS])
+    for name, (tr, tp, ty) in zip(FINGER_NAMES, tip_euler):
+        print(f"  fingertip {name:6s} (deg): roll={tr:+.1f} pitch={tp:+.1f} yaw={ty:+.1f}")
+    print(f"  betas: {np.round(preds['betas'][0], 3).tolist()}")
+
+
 def render_mesh(image_bgr: np.ndarray, vertices_2d: np.ndarray, vertices_cam: np.ndarray,
                 faces: np.ndarray, color: tuple, alpha: float = 0.6) -> None:
     """Overlay the projected MANO mesh with flat shading and depth sorting.
@@ -164,11 +233,15 @@ def draw_hand(image_bgr: np.ndarray, ret: dict, faces_right: np.ndarray, draw_me
 def main():
     parser = argparse.ArgumentParser(description="hamer-mini demo")
     parser.add_argument("--image", type=str, default="example_data/test1.jpg", help="Input image path")
-    parser.add_argument("--output", type=str, default="output", help="Output directory")
+    parser.add_argument("--output", type=str, default="output",
+                        help="Output directory, or output image file path")
     parser.add_argument("--body-conf", type=float, default=0.5, help="Person detection score threshold")
     parser.add_argument("--hand-conf", type=float, default=0.5, help="Hand keypoint confidence threshold")
     parser.add_argument("--rescale-factor", type=float, default=1.5, help="Hand bbox padding factor")
     parser.add_argument("--mesh", action="store_true", help="Also render the projected MANO mesh overlay")
+    parser.add_argument("--rotation", action="store_true",
+                        help="Visualize the MANO rotations: wrist (global_orient) frame and "
+                             "per-joint (hand_pose) axes, and print them as Euler angles")
     args = parser.parse_args()
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -205,9 +278,16 @@ def main():
             print(f"  pred_vertices_2d:  {preds['pred_vertices_2d'].shape}")
         draw_hand(image_bgr, ret, faces_right,
                   draw_mesh=args.mesh and pyrender_mods is None)
+        if args.rotation:
+            draw_hand_rotations(image_bgr, ret)
+            print_mano_rotations(preds)
 
-    os.makedirs(args.output, exist_ok=True)
-    out_path = os.path.join(args.output, os.path.basename(args.image))
+    if os.path.splitext(args.output)[1].lower() in (".jpg", ".jpeg", ".png", ".webp", ".bmp"):
+        out_path = args.output
+        os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    else:
+        os.makedirs(args.output, exist_ok=True)
+        out_path = os.path.join(args.output, os.path.basename(args.image))
     cv2.imwrite(out_path, image_bgr)
     print(f"saved visualization to {out_path}")
 
