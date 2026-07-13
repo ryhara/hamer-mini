@@ -67,6 +67,10 @@ uv sync --extra render
 python demo.py --image example_data/test1.jpg --mesh --hand-conf 0.3
 ```
 
+```bash
+python demo_video.py --video path/to/input.mp4 --mesh
+```
+
 The demo draws the detection bbox, the 2D hand skeleton and (with `--mesh`) the MANO mesh, all in the same per-hand color (green = right, blue = left). With the `render` extra installed the mesh is rendered with pyrender (lighting and correct occlusion, headless via EGL); otherwise a built-in OpenCV rasterizer is used, so `--mesh` works without any OpenGL setup.
 
 ## Weights
